@@ -1,15 +1,16 @@
 <template>
-  <div class="about">
-    <h1>This is an about page</h1>
-  </div>
+  <section>
+    <h1>Acerca de</h1>
+    <p>
+      Cada tarea puede depender de otras. Esas relaciones se tratan como un grafo dirigido para
+      detectar ciclos y calcular un orden válido de ejecución.
+    </p>
+  </section>
 </template>
 
-<style>
-@media (min-width: 1024px) {
-  .about {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-  }
+<style scoped>
+h1 {
+  margin-bottom: 0.75rem;
+  color: var(--color-heading);
 }
 </style>
