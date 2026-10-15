@@ -1,5 +1,6 @@
 import express from "express";
 import { errorHandler } from "./middlewares/error-handler";
+import { authRouter } from "./routes/auth.routes";
 import { healthRouter } from "./routes/health.routes";
 
 export function createApp() {
@@ -15,6 +16,7 @@ export function createApp() {
   });
 
   app.use(healthRouter);
+  app.use(authRouter);
   app.use(errorHandler);
 
   return app;
