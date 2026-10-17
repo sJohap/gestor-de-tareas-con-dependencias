@@ -12,12 +12,19 @@ function required(name: string): string {
 }
 
 const port = Number(process.env.PORT ?? 3000);
+const accessTokenTtlSeconds = Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 900);
 
 if (!Number.isInteger(port) || port <= 0) {
   throw new Error("PORT debe ser un número entero mayor que 0");
 }
 
+if (!Number.isInteger(accessTokenTtlSeconds) || accessTokenTtlSeconds <= 0) {
+  throw new Error("ACCESS_TOKEN_TTL_SECONDS debe ser un número entero mayor que 0");
+}
+
 export const env = {
   port,
   databaseUrl: required("DATABASE_URL"),
+  jwtAccessSecret: required("JWT_ACCESS_SECRET"),
+  accessTokenTtlSeconds,
 };
