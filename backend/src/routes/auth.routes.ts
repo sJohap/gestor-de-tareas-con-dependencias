@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { loginController, registerController } from "../controllers/auth.controller";
+import { loginController, meController, registerController } from "../controllers/auth.controller";
+import { requireAuth } from "../middlewares/require-auth";
 
 export const authRouter = Router();
 
@@ -9,4 +10,8 @@ authRouter.post("/auth/register", (req, res, next) => {
 
 authRouter.post("/auth/login", (req, res, next) => {
   loginController(req, res).catch(next);
+});
+
+authRouter.get("/auth/me", requireAuth, (req, res, next) => {
+  meController(req, res).catch(next);
 });

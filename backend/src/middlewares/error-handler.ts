@@ -1,8 +1,25 @@
 import type { ErrorRequestHandler } from "express";
+import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { ZodError } from "zod";
 import { HttpError } from "../utils/http-error";
 
 export const errorHandler: ErrorRequestHandler = (err: unknown, _req, res, _next) => {
+  if (err instanceof TokenExpiredError) {
+    res.status(401).json({
+      status: "error",
+      message: "El token de acceso expiró",
+    });
+    return;
+  }
+
+  if (err instanceof JsonWebTokenError) {
+    res.status(401).json({
+      status: "error",
+      message: "Token inválido",
+    });
+    return;
+  }
+
   if (err instanceof HttpError) {
     res.status(err.statusCode).json({
       status: "error",
