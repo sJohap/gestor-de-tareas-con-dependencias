@@ -1,0 +1,62 @@
+import { computed, ref } from 'vue'
+import { defineStore } from 'pinia'
+import { api } from '@/lib/api'
+import type { AuthResponse, User } from '@/types/user'
+
+export const useAuthStore = defineStore('auth', () => {
+  const user = ref<User | null>(null)
+  const accessToken = ref<string | null>(null)
+  const ready = ref(false)
+
+  const isAuthenticated = computed(() => user.value !== null)
+
+  function applySession(session: AuthResponse): void {
+    user.value = session.user
+    accessToken.value = session.accessToken
+  }
+
+  function clearSession(): void {
+    user.value = null
+    accessToken.value = null
+  }
+
+  async function register(name: string, email: string, password: string): Promise<void> {
+    const response = await api.post<AuthResponse>('/auth/register', { name, email, password })
+    applySession(response.data)
+  }
+
+  async function login(email: string, password: string): Promise<void> {
+    const response = await api.post<AuthResponse>('/auth/login', { email, password })
+    applySession(response.data)
+  }
+
+  async function logout(): Promise<void> {
+    try {
+      await api.post('/auth/logout')
+    } finally {
+      clearSession()
+    }
+  }
+
+  async function restoreSession(): Promise<void> {
+    try {
+      const response = await api.post<AuthResponse>('/auth/refresh')
+      applySession(response.data)
+    } catch {
+      clearSession()
+    } finally {
+      ready.value = true
+    }
+  }
+
+  return {
+    user,
+    accessToken,
+    ready,
+    isAuthenticated,
+    register,
+    login,
+    logout,
+    restoreSession,
+  }
+})
