@@ -1,6 +1,6 @@
 # Gestor de tareas con dependencias
 
-API del gestor de tareas y frontend en Vue. La API se conecta a PostgreSQL, aplica migraciones, expone un health check y permite registrar usuarios, iniciar sesión y consultar el perfil con un token de acceso.
+API del gestor de tareas y frontend en Vue. La API se conecta a PostgreSQL, aplica migraciones y maneja la sesión con dos tokens: uno de acceso, corto, y uno de refresco en una cookie HttpOnly.
 
 ## Requisitos
 
@@ -25,6 +25,8 @@ copy .env.example .env
 
 Edita `backend/.env` y reemplaza `TU_PASSWORD` por la contraseña del usuario `postgres`. Cambia también `JWT_ACCESS_SECRET` por un valor largo y aleatorio. Ese archivo no se sube a GitHub.
 
+`COOKIE_SECURE` se deja en `false` mientras la API corre en `http://localhost`. En un servidor con HTTPS debe quedar en `true`.
+
 ## Arranque
 
 ```powershell
@@ -47,13 +49,18 @@ Prueba en el navegador:
 |---|---|---|---|
 | `POST` | `/auth/register` | `name`, `email`, `password` | No |
 | `POST` | `/auth/login` | `email`, `password` | No |
+| `POST` | `/auth/refresh` | — | Cookie |
+| `POST` | `/auth/logout` | — | Bearer y cookie |
 | `GET` | `/auth/me` | — | Bearer |
 
 - La contraseña necesita al menos 8 caracteres, una letra y un número. Se guarda como hash Argon2id, nunca en texto plano.
 - El correo se guarda en minúsculas. Si ya está registrado, `/auth/register` responde `409`.
 - Si el correo o la contraseña no coinciden, `/auth/login` responde `401`.
 - Si falta un campo o tiene un formato inválido, la respuesta es `400` con la lista de errores.
-- Registro e inicio de sesión responden con el usuario y un `accessToken` JWT. Ese token dura 15 minutos y se envía en `Authorization: Bearer ...`.
+- Registro e inicio de sesión responden con el usuario y un `accessToken` JWT. Ese token dura 15 minutos y se envía en `Authorization: Bearer ...`. El frontend lo guarda en memoria.
+- Esas mismas respuestas dejan una cookie `refreshToken`: HttpOnly, SameSite Lax y con ruta `/auth`. Dura 7 días. En la base solo se guarda su hash, nunca el valor de la cookie.
+- `POST /auth/refresh` lee esa cookie, la invalida y entrega otra junto con un access token nuevo. Si se reutiliza una cookie ya usada, se cierran todas las sesiones de ese usuario.
+- `POST /auth/logout` solo revoca la cookie si pertenece al usuario del access token. Si no es suya, responde `403`.
 - `GET /auth/me` responde `401` si falta el token, está mal formado o ya expiró.
 
 Con la API corriendo, en otra terminal de PowerShell:
@@ -71,7 +78,7 @@ Invoke-RestMethod -Uri http://localhost:3000/auth/me -Headers @{ Authorization =
 
 ## Frontend
 
-En otra terminal:
+En otra terminal, con la API ya corriendo:
 
 ```powershell
 cd frontend
@@ -79,4 +86,6 @@ npm install
 npm run dev
 ```
 
-Abre http://localhost:5173/.
+Abre http://localhost:5173/. El registro y el inicio de sesión llaman a la API. Vite reenvía `/auth` a `http://localhost:3000`, así la cookie queda en el mismo sitio que la página.
+
+Al recargar, si la cookie sigue vigente, la app pide un access token nuevo y muestra el nombre en la barra. Si no hay cookie, la barra muestra el enlace para iniciar sesión.
