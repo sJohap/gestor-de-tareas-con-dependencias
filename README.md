@@ -88,4 +88,6 @@ npm run dev
 
 Abre http://localhost:5173/. El registro y el inicio de sesión llaman a la API. Vite reenvía `/auth` a `http://localhost:3000`, así la cookie queda en el mismo sitio que la página.
 
-Al recargar, si la cookie sigue vigente, la app pide un access token nuevo y muestra el nombre en la barra. Si no hay cookie, la barra muestra el enlace para iniciar sesión.
+Al recargar, si la cookie sigue vigente, la app pide un access token nuevo y muestra el nombre en la barra. Inicio y Acerca de exigen sesión: sin ella, la ruta vuelve a `/iniciar-sesion`. Si ya hay sesión, registro e inicio de sesión vuelven al inicio.
+
+Si una petición responde `401` porque el access token venció, el cliente lo renueva una sola vez con la cookie y repite la petición. Un `401` de login o registro no se renueva: es una contraseña incorrecta.
