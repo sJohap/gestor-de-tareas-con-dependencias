@@ -9,6 +9,7 @@ export const useAuthStore = defineStore('auth', () => {
   const ready = ref(false)
 
   const isAuthenticated = computed(() => user.value !== null)
+  let refreshRequest: Promise<void> | null = null
 
   function applySession(session: AuthResponse): void {
     user.value = session.user
@@ -38,10 +39,24 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function refreshSession(): Promise<void> {
+    if (!refreshRequest) {
+      refreshRequest = api
+        .post<AuthResponse>('/auth/refresh')
+        .then((response) => {
+          applySession(response.data)
+        })
+        .finally(() => {
+          refreshRequest = null
+        })
+    }
+
+    return refreshRequest
+  }
+
   async function restoreSession(): Promise<void> {
     try {
-      const response = await api.post<AuthResponse>('/auth/refresh')
-      applySession(response.data)
+      await refreshSession()
     } catch {
       clearSession()
     } finally {
@@ -57,6 +72,8 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     login,
     logout,
+    clearSession,
+    refreshSession,
     restoreSession,
   }
 })
