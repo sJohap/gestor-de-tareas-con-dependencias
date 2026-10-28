@@ -5,6 +5,7 @@ import { env } from "./config/env";
 import { errorHandler } from "./middlewares/error-handler";
 import { authRouter } from "./routes/auth.routes";
 import { healthRouter } from "./routes/health.routes";
+import { taskRouter } from "./routes/task.routes";
 
 export function createApp() {
   const app = express();
@@ -27,6 +28,7 @@ export function createApp() {
 
   app.use(healthRouter);
   app.use(authRouter);
+  app.use(taskRouter);
   app.use(errorHandler);
 
   return app;
