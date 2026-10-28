@@ -17,6 +17,7 @@ async function onLogout(): Promise<void> {
       <RouterLink to="/" class="brand">Gestor de tareas</RouterLink>
       <nav>
         <RouterLink to="/">Inicio</RouterLink>
+        <RouterLink to="/tareas">Tareas</RouterLink>
         <RouterLink to="/about">Acerca de</RouterLink>
         <RouterLink v-if="!auth.isAuthenticated" to="/iniciar-sesion">Iniciar sesión</RouterLink>
         <template v-else>

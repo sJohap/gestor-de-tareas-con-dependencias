@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -10,6 +11,7 @@ const auth = useAuthStore()
     <p v-if="auth.user">Hola, {{ auth.user.name }}. Tu sesión está activa.</p>
     <p>
       Registra tareas, define de cuáles dependen y consulta cuáles están listas para empezar.
+      <RouterLink to="/tareas">Ir a las tareas</RouterLink>
     </p>
   </section>
 </template>
