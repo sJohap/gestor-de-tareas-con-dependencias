@@ -91,3 +91,20 @@ Abre http://localhost:5173/. El registro y el inicio de sesión llaman a la API.
 Al recargar, si la cookie sigue vigente, la app pide un access token nuevo y muestra el nombre en la barra. Inicio y Acerca de exigen sesión: sin ella, la ruta vuelve a `/iniciar-sesion`. Si ya hay sesión, registro e inicio de sesión vuelven al inicio.
 
 Si una petición responde `401` porque el access token venció, el cliente lo renueva una sola vez con la cookie y repite la petición. Un `401` de login o registro no se renueva: es una contraseña incorrecta.
+
+## Tareas
+
+Todas estas rutas piden `Authorization: Bearer ...`. Solo se ven y se modifican las tareas del usuario autenticado. Si la tarea es de otra persona, la respuesta es `403`.
+
+| Método | Ruta | Cuerpo |
+|---|---|---|
+| `GET` | `/tasks` | — |
+| `POST` | `/tasks` | `title`, `description` opcional |
+| `PATCH` | `/tasks/:id` | `title`, `description`, `status` |
+| `DELETE` | `/tasks/:id` | — |
+| `POST` | `/tasks/:id/dependencies` | `dependsOnId` |
+| `DELETE` | `/tasks/:id/dependencies/:dependsOnId` | — |
+
+El estado puede ser `pending`, `in_progress` o `done`. Una tarea no puede depender de sí misma. El mismo enlace no se puede repetir. Detectar ciclos queda para después.
+
+En el frontend, con la sesión iniciada, las tareas están en http://localhost:5173/tareas. Vite también reenvía `/tasks` a la API.
