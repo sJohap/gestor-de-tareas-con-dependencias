@@ -1,4 +1,5 @@
 import { DatabaseError } from "pg";
+import { wouldCreateCycle } from "../domain/dependency-graph";
 import {
   deleteTaskDependency,
   insertTaskDependency,
@@ -36,6 +37,12 @@ export async function addDependency(
 
   await requireOwnTaskId(taskId, actorId);
   await requireOwnTaskId(dependsOnId, actorId);
+
+  const edges = await listDependencyEdgesForUser(actorId);
+
+  if (wouldCreateCycle(edges, taskId, dependsOnId)) {
+    throw new HttpError(409, "Esa dependencia forma un ciclo");
+  }
 
   try {
     return await insertTaskDependency(taskId, dependsOnId);
