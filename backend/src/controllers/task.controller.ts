@@ -7,6 +7,7 @@ import {
   updateTaskSchema,
 } from "../schemas/task.schema";
 import { addDependency, listDependencies, removeDependency } from "../services/task-dependency.service";
+import { buildTaskPlan } from "../services/task-plan.service";
 import { createTask, editTask, listTasks, removeTask } from "../services/task.service";
 import { HttpError } from "../utils/http-error";
 
@@ -36,6 +37,11 @@ export async function listTasksController(req: Request, res: Response): Promise<
       dependsOnIds: dependsOnIds.get(task.id) ?? [],
     })),
   });
+}
+
+export async function taskPlanController(req: Request, res: Response): Promise<void> {
+  const plan = await buildTaskPlan(actorId(req));
+  res.status(200).json(plan);
 }
 
 export async function createTaskController(req: Request, res: Response): Promise<void> {

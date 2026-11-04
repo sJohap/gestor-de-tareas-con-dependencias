@@ -5,6 +5,7 @@ import {
   deleteTaskController,
   listTasksController,
   removeDependencyController,
+  taskPlanController,
   updateTaskController,
 } from "../controllers/task.controller";
 import { requireAuth } from "../middlewares/require-auth";
@@ -15,6 +16,10 @@ taskRouter.use(requireAuth);
 
 taskRouter.get("/tasks", (req, res, next) => {
   listTasksController(req, res).catch(next);
+});
+
+taskRouter.get("/tasks/plan", (req, res, next) => {
+  taskPlanController(req, res).catch(next);
 });
 
 taskRouter.post("/tasks", (req, res, next) => {
