@@ -2,9 +2,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '@/lib/api'
 import { getApiErrorMessage } from '@/lib/api-error'
-import { taskStatusLabels, type Task, type TaskStatus } from '@/types/task'
+import { taskStatusLabels, executionStateLabels, type Task, type TaskPlan, type TaskStatus } from '@/types/task'
 
 const tasks = ref<Task[]>([])
+const order = ref<TaskPlan['order']>([])
+const hasCycle = ref(false)
 const title = ref('')
 const description = ref('')
 const errorMessage = ref('')
@@ -25,8 +27,10 @@ function otherTasks(taskId: string): Task[] {
 }
 
 async function loadTasks(): Promise<void> {
-  const response = await api.get<{ tasks: Task[] }>('/tasks')
+  const response = await api.get<TaskPlan>('/tasks/plan')
   tasks.value = response.data.tasks
+  order.value = response.data.order
+  hasCycle.value = response.data.hasCycle
 }
 
 async function onCreate(): Promise<void> {
@@ -140,6 +144,13 @@ onMounted(async () => {
     </form>
 
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+    <p v-if="hasCycle" class="error">Hay un ciclo en las dependencias. El orden no está completo.</p>
+    <section v-if="!loading && order.length > 0" class="card order">
+      <h2>Orden de ejecución</h2>
+      <ol>
+        <li v-for="item in order" :key="item.id">{{ item.title }}</li>
+      </ol>
+    </section>
     <p v-if="loading">Cargando tareas...</p>
     <p v-else-if="!hasTasks" class="empty">Todavía no hay tareas.</p>
 
@@ -147,6 +158,9 @@ onMounted(async () => {
       <li v-for="task in tasks" :key="task.id" class="card">
         <div class="heading">
           <h2>{{ task.title }}</h2>
+          <span class="badge" :data-state="task.executionState">
+            {{ executionStateLabels[task.executionState] }}
+          </span>
           <button type="button" class="ghost" @click="onDelete(task)">Eliminar</button>
         </div>
         <p v-if="task.description">{{ task.description }}</p>
@@ -278,6 +292,27 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+.order ol {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.badge {
+  margin-left: auto;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  font-size: 0.85rem;
+}
+
+.badge[data-state='ready'] {
+  color: hsla(160, 100%, 30%, 1);
+}
+
+.badge[data-state='blocked'] {
+  color: #b42318;
 }
 
 .deps {
