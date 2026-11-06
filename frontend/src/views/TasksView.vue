@@ -2,13 +2,21 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '@/lib/api'
 import { getApiErrorMessage } from '@/lib/api-error'
-import { taskStatusLabels, executionStateLabels, type Task, type TaskPlan, type TaskStatus } from '@/types/task'
+import {
+  executionStateLabels,
+  taskStatusLabels,
+  type Task,
+  type TaskPlan,
+  type TaskStatus,
+} from '@/types/task'
 
 const tasks = ref<Task[]>([])
 const order = ref<TaskPlan['order']>([])
 const hasCycle = ref(false)
+const projectDays = ref(0)
 const title = ref('')
 const description = ref('')
+const durationDays = ref(1)
 const errorMessage = ref('')
 const loading = ref(true)
 const submitting = ref(false)
@@ -17,6 +25,7 @@ const dependencyTarget = ref<Record<string, string>>({})
 const statuses: TaskStatus[] = ['pending', 'in_progress', 'done']
 
 const hasTasks = computed(() => tasks.value.length > 0)
+const criticalCount = computed(() => tasks.value.filter((task) => task.critical).length)
 
 function titleOf(id: string): string {
   return tasks.value.find((task) => task.id === id)?.title ?? 'Tarea eliminada'
@@ -31,6 +40,7 @@ async function loadTasks(): Promise<void> {
   tasks.value = response.data.tasks
   order.value = response.data.order
   hasCycle.value = response.data.hasCycle
+  projectDays.value = response.data.projectDays
 }
 
 async function onCreate(): Promise<void> {
@@ -41,9 +51,11 @@ async function onCreate(): Promise<void> {
     await api.post('/tasks', {
       title: title.value,
       description: description.value,
+      durationDays: durationDays.value,
     })
     title.value = ''
     description.value = ''
+    durationDays.value = 1
     await loadTasks()
   } catch (error) {
     errorMessage.value = getApiErrorMessage(error)
@@ -52,14 +64,15 @@ async function onCreate(): Promise<void> {
   }
 }
 
-async function onStatusChange(task: Task, status: TaskStatus): Promise<void> {
+async function saveTask(task: Task, patch: Partial<Pick<Task, 'status' | 'durationDays'>>): Promise<void> {
   errorMessage.value = ''
 
   try {
     await api.patch(`/tasks/${task.id}`, {
       title: task.title,
       description: task.description ?? '',
-      status,
+      status: patch.status ?? task.status,
+      durationDays: patch.durationDays ?? task.durationDays,
     })
     await loadTasks()
   } catch (error) {
@@ -125,8 +138,15 @@ onMounted(async () => {
 <template>
   <section class="tasks">
     <header class="intro">
-      <h1>Tareas</h1>
-      <p>Crea una tarea y marca de cuáles tiene que esperar.</p>
+      <div>
+        <p class="eyebrow">Plan de trabajo</p>
+        <h1>Tareas</h1>
+        <p>Define la duración, engancha dependencias y mira cuál es el camino crítico.</p>
+      </div>
+      <div v-if="hasTasks && !hasCycle" class="summary">
+        <span><strong>{{ projectDays }}</strong> días del proyecto</span>
+        <span><strong>{{ criticalCount }}</strong> en el camino crítico</span>
+      </div>
     </header>
 
     <form class="card composer" @submit.prevent="onCreate">
@@ -135,8 +155,12 @@ onMounted(async () => {
         <input v-model="title" type="text" maxlength="120" required />
       </label>
       <label>
+        Duración en días
+        <input v-model.number="durationDays" type="number" min="1" max="365" required />
+      </label>
+      <label class="wide">
         Descripción
-        <textarea v-model="description" rows="3" maxlength="500"></textarea>
+        <textarea v-model="description" rows="2" maxlength="500"></textarea>
       </label>
       <button type="submit" :disabled="submitting">
         {{ submitting ? 'Guardando...' : 'Crear tarea' }}
@@ -144,41 +168,80 @@ onMounted(async () => {
     </form>
 
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-    <p v-if="hasCycle" class="error">Hay un ciclo en las dependencias. El orden no está completo.</p>
+    <p v-if="hasCycle" class="error">Hay un ciclo en las dependencias. El camino crítico no se puede calcular.</p>
+
     <section v-if="!loading && order.length > 0" class="card order">
       <h2>Orden de ejecución</h2>
       <ol>
-        <li v-for="item in order" :key="item.id">{{ item.title }}</li>
+        <li v-for="item in order" :key="item.id" :class="{ critical: item.critical }">
+          <span>{{ item.title }}</span>
+          <small v-if="item.critical">Crítica</small>
+        </li>
       </ol>
     </section>
+
     <p v-if="loading">Cargando tareas...</p>
-    <p v-else-if="!hasTasks" class="empty">Todavía no hay tareas.</p>
+    <p v-else-if="!hasTasks" class="empty">Todavía no hay tareas. Crea la primera arriba.</p>
 
     <ul v-else class="list">
-      <li v-for="task in tasks" :key="task.id" class="card">
+      <li v-for="task in tasks" :key="task.id" class="card" :class="{ critical: task.critical }">
         <div class="heading">
-          <h2>{{ task.title }}</h2>
+          <div>
+            <h2>{{ task.title }}</h2>
+            <p v-if="task.description" class="description">{{ task.description }}</p>
+          </div>
           <span class="badge" :data-state="task.executionState">
             {{ executionStateLabels[task.executionState] }}
           </span>
           <button type="button" class="ghost" @click="onDelete(task)">Eliminar</button>
         </div>
-        <p v-if="task.description">{{ task.description }}</p>
-        <label class="status">
-          Estado
-          <select
-            :value="task.status"
-            @change="onStatusChange(task, ($event.target as HTMLSelectElement).value as TaskStatus)"
-          >
-            <option v-for="status in statuses" :key="status" :value="status">
-              {{ taskStatusLabels[status] }}
-            </option>
-          </select>
-        </label>
+
+        <dl class="metrics">
+          <div>
+            <dt>Duración</dt>
+            <dd>{{ task.durationDays }} días</dd>
+          </div>
+          <div>
+            <dt>Inicio más pronto</dt>
+            <dd>Día {{ task.earliestStart }}</dd>
+          </div>
+          <div>
+            <dt>Fin más tarde</dt>
+            <dd>Día {{ task.latestFinish }}</dd>
+          </div>
+          <div>
+            <dt>Holgura</dt>
+            <dd>{{ task.slack }} días</dd>
+          </div>
+        </dl>
+
+        <div class="controls">
+          <label>
+            Estado
+            <select
+              :value="task.status"
+              @change="saveTask(task, { status: ($event.target as HTMLSelectElement).value as TaskStatus })"
+            >
+              <option v-for="status in statuses" :key="status" :value="status">
+                {{ taskStatusLabels[status] }}
+              </option>
+            </select>
+          </label>
+          <label>
+            Duración
+            <input
+              :value="task.durationDays"
+              type="number"
+              min="1"
+              max="365"
+              @change="saveTask(task, { durationDays: Number(($event.target as HTMLInputElement).value) })"
+            />
+          </label>
+        </div>
 
         <div class="deps">
           <h3>Depende de</h3>
-          <p v-if="task.dependsOnIds.length === 0" class="muted">Ninguna tarea.</p>
+          <p v-if="task.dependsOnIds.length === 0" class="muted">Ninguna tarea. Puede empezar al día 0.</p>
           <ul v-else>
             <li v-for="dependsOnId in task.dependsOnIds" :key="dependsOnId">
               <span>{{ titleOf(dependsOnId) }}</span>
@@ -209,6 +272,20 @@ onMounted(async () => {
   gap: 1rem;
 }
 
+.intro {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.eyebrow {
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 h1,
 h2,
 h3 {
@@ -216,7 +293,7 @@ h3 {
 }
 
 h1 {
-  margin-bottom: 0.35rem;
+  margin: 0.15rem 0 0.35rem;
 }
 
 h2 {
@@ -228,23 +305,39 @@ h3 {
   font-size: 0.95rem;
 }
 
+.summary {
+  display: flex;
+  gap: 0.75rem;
+  color: var(--color-heading);
+}
+
+.summary span {
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  background: var(--color-accent-soft);
+}
+
 .card {
   padding: 1rem 1.1rem;
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--color-background-soft);
 }
 
-.composer,
-.deps form,
-.status {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
+.card.critical {
+  border-color: var(--color-critical);
+  box-shadow: inset 3px 0 0 var(--color-critical);
 }
 
 .composer {
+  display: grid;
+  grid-template-columns: 1.4fr 0.6fr;
   gap: 0.85rem;
+}
+
+.wide,
+.composer button {
+  grid-column: 1 / -1;
 }
 
 label {
@@ -266,11 +359,11 @@ select {
 
 button {
   width: fit-content;
-  padding: 0.55rem 0.8rem;
+  padding: 0.55rem 0.9rem;
   border: 0;
   border-radius: 8px;
-  background: hsla(160, 100%, 37%, 1);
-  color: #fff;
+  background: var(--color-accent);
+  color: white;
   cursor: pointer;
 }
 
@@ -285,34 +378,78 @@ button:disabled {
   border: 1px solid var(--color-border);
 }
 
-.heading,
-.deps li,
-.deps form {
+.order ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.order li {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.45rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  background: var(--color-background-mute);
+}
+
+.order li.critical {
+  background: var(--color-critical-soft);
+  color: var(--color-critical);
+}
+
+.order small {
+  font-size: 0.75rem;
+}
+
+.heading,
+.deps li,
+.deps form,
+.controls {
+  display: flex;
+  align-items: center;
   gap: 0.75rem;
 }
 
-.order ol {
-  margin: 0.5rem 0 0;
-  padding-left: 1.25rem;
+.heading {
+  justify-content: space-between;
 }
 
-.badge {
-  margin-left: auto;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  border: 1px solid var(--color-border);
-  font-size: 0.85rem;
+.description {
+  margin-top: 0.25rem;
 }
 
-.badge[data-state='ready'] {
-  color: hsla(160, 100%, 30%, 1);
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.6rem;
+  margin: 1rem 0;
 }
 
-.badge[data-state='blocked'] {
-  color: #b42318;
+.metrics div {
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  background: var(--color-background);
+}
+
+.metrics dt {
+  font-size: 0.75rem;
+  color: var(--color-text);
+}
+
+.metrics dd {
+  color: var(--color-heading);
+}
+
+.controls {
+  align-items: flex-end;
+}
+
+.controls label {
+  min-width: 140px;
 }
 
 .deps {
@@ -328,6 +465,11 @@ button:disabled {
   list-style: none;
 }
 
+.deps li,
+.deps form {
+  justify-content: space-between;
+}
+
 .list {
   display: flex;
   flex-direction: column;
@@ -337,9 +479,22 @@ button:disabled {
   list-style: none;
 }
 
-.status {
-  max-width: 220px;
-  margin-top: 0.85rem;
+.badge {
+  margin-left: auto;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-background-mute);
+  font-size: 0.85rem;
+}
+
+.badge[data-state='ready'] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.badge[data-state='blocked'] {
+  background: var(--color-critical-soft);
+  color: var(--color-critical);
 }
 
 .muted,
@@ -348,6 +503,19 @@ button:disabled {
 }
 
 .error {
-  color: #b42318;
+  color: var(--color-critical);
+}
+
+@media (max-width: 720px) {
+  .intro,
+  .summary,
+  .composer,
+  .metrics,
+  .controls,
+  .heading {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>

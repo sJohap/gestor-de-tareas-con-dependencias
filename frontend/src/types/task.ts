@@ -6,20 +6,29 @@ export type Task = {
   title: string
   description: string | null
   status: TaskStatus
+  durationDays: number
   createdAt: string
   updatedAt: string
   dependsOnIds: string[]
   executionState: ExecutionState
+  earliestStart: number
+  earliestFinish: number
+  latestStart: number
+  latestFinish: number
+  slack: number
+  critical: boolean
 }
 
 export type TaskOrderItem = {
   position: number
   id: string
   title: string
+  critical: boolean
 }
 
 export type TaskPlan = {
   hasCycle: boolean
+  projectDays: number
   order: TaskOrderItem[]
   tasks: Task[]
 }
