@@ -45,14 +45,14 @@ async function onLogout(): Promise<void> {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-background-soft);
+  padding: 0.9rem 1.5rem;
+  background: var(--color-topbar);
+  color: var(--color-topbar-text);
 }
 
 .brand {
-  font-weight: 600;
-  color: var(--color-heading);
+  font-weight: 700;
+  color: var(--color-topbar-text);
 }
 
 nav {
@@ -64,29 +64,28 @@ nav {
 nav a,
 .who {
   padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  color: var(--color-text);
+  border-radius: 999px;
+  color: var(--color-topbar-text);
 }
 
 nav a.router-link-exact-active {
-  color: var(--color-heading);
-  background: var(--color-background-mute);
+  background: rgb(255 255 255 / 14%);
 }
 
 button {
   margin-left: 0.35rem;
   padding: 0.35rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-background);
-  color: var(--color-text);
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-topbar-text);
   cursor: pointer;
 }
 
 .content {
   flex: 1;
-  width: min(960px, 100%);
+  width: min(1040px, 100%);
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 2rem 1.5rem 3rem;
 }
 </style>

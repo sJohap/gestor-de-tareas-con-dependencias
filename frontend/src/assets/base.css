@@ -23,30 +23,42 @@
 
 /* semantic color variables for this project */
 :root {
-  --color-background: var(--vt-c-white);
-  --color-background-soft: var(--vt-c-white-soft);
-  --color-background-mute: var(--vt-c-white-mute);
+  --color-background: #f3f6f4;
+  --color-background-soft: #ffffff;
+  --color-background-mute: #e7eeea;
 
-  --color-border: var(--vt-c-divider-light-2);
-  --color-border-hover: var(--vt-c-divider-light-1);
+  --color-border: #d5e0da;
+  --color-border-hover: #b7c9bf;
 
-  --color-heading: var(--vt-c-text-light-1);
-  --color-text: var(--vt-c-text-light-1);
+  --color-heading: #13241c;
+  --color-text: #3d5248;
+  --color-accent: #0c7a56;
+  --color-accent-soft: #e5f5ee;
+  --color-critical: #9a3412;
+  --color-critical-soft: #fff1e8;
+  --color-topbar: #12352a;
+  --color-topbar-text: #f4fbf7;
 
   --section-gap: 160px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: var(--vt-c-black);
-    --color-background-soft: var(--vt-c-black-soft);
-    --color-background-mute: var(--vt-c-black-mute);
+    --color-background: #101614;
+    --color-background-soft: #18211d;
+    --color-background-mute: #24302a;
 
-    --color-border: var(--vt-c-divider-dark-2);
-    --color-border-hover: var(--vt-c-divider-dark-1);
+    --color-border: #314039;
+    --color-border-hover: #4c6358;
 
-    --color-heading: var(--vt-c-text-dark-1);
-    --color-text: var(--vt-c-text-dark-2);
+    --color-heading: #f4fbf7;
+    --color-text: #c5d5cc;
+    --color-accent: #3dbe8b;
+    --color-accent-soft: #163328;
+    --color-critical: #f0b089;
+    --color-critical-soft: #3a2418;
+    --color-topbar: #0c1c16;
+    --color-topbar-text: #f4fbf7;
   }
 }
 

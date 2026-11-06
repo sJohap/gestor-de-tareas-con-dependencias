@@ -20,11 +20,13 @@ import { RouterLink, RouterView } from 'vue-router'
   justify-content: center;
   gap: 1.5rem;
   padding: 2rem 1rem;
-  background: var(--color-background-soft);
+  background:
+    radial-gradient(circle at top, var(--color-accent-soft), transparent 42%),
+    var(--color-background);
 }
 
 .brand {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-heading);
 }
 
@@ -32,7 +34,8 @@ import { RouterLink, RouterView } from 'vue-router'
   width: min(420px, 100%);
   padding: 2rem;
   border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-background);
+  border-radius: 16px;
+  background: var(--color-background-soft);
+  box-shadow: 0 18px 40px rgb(18 53 42 / 8%);
 }
 </style>

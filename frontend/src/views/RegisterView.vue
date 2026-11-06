@@ -92,7 +92,7 @@ button {
   padding: 0.6rem 0.8rem;
   border: 0;
   border-radius: 8px;
-  background: hsla(160, 100%, 37%, 1);
+  background: var(--color-accent);
   color: #fff;
   cursor: pointer;
 }

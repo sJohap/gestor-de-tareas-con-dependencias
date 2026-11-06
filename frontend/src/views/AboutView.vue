@@ -2,8 +2,8 @@
   <section>
     <h1>Acerca de</h1>
     <p>
-      Cada tarea puede depender de otras. Esas relaciones se tratan como un grafo dirigido para
-      detectar ciclos y calcular un orden válido de ejecución.
+      Cada tarea tiene una duración. El camino crítico es la cadena más larga: si una de esas
+      tareas se atrasa, el proyecto termina más tarde. Las demás tienen holgura.
     </p>
   </section>
 </template>
