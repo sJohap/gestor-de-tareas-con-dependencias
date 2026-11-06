@@ -100,18 +100,21 @@ Todas estas rutas piden `Authorization: Bearer ...`. Solo se ven y se modifican 
 |---|---|---|
 | `GET` | `/tasks` | — |
 | `GET` | `/tasks/plan` | — |
-| `POST` | `/tasks` | `title`, `description` opcional |
-| `PATCH` | `/tasks/:id` | `title`, `description`, `status` |
+| `POST` | `/tasks` | `title`, `description` opcional, `durationDays` |
+| `PATCH` | `/tasks/:id` | `title`, `description`, `status`, `durationDays` |
 | `DELETE` | `/tasks/:id` | — |
 | `POST` | `/tasks/:id/dependencies` | `dependsOnId` |
 | `DELETE` | `/tasks/:id/dependencies/:dependsOnId` | — |
 
 El estado puede ser `pending`, `in_progress` o `done`. Una tarea no puede depender de sí misma. El mismo enlace no se puede repetir. Si el enlace cierra un ciclo, `POST /tasks/:id/dependencies` responde `409`.
 
-`GET /tasks/plan` arma el grafo dirigido y responde tres cosas:
+`GET /tasks/plan` arma el grafo dirigido y responde:
 
-- `order`: el orden de ejecución, calculado con el algoritmo de Kahn. Una tarea aparece después de todas las de las que depende.
-- `hasCycle`: `true` solo si el grafo todavía tiene un ciclo.
-- `tasks`: cada tarea con `executionState`. `ready` si ya puede empezar, `blocked` si le falta alguna dependencia, y `done` si está completada.
+- `order`: el orden de ejecución, calculado con el algoritmo de Kahn. Una tarea aparece después de todas las de las que depende. Las del camino crítico van marcadas.
+- `hasCycle`: `true` solo si el grafo todavía tiene un ciclo. En ese caso no hay camino crítico.
+- `projectDays`: la duración mínima del proyecto, que es el camino más largo.
+- `tasks`: cada tarea con `executionState`, `durationDays`, inicio más pronto, fin más tarde, `slack` y `critical`.
 
-En el frontend, con la sesión iniciada, las tareas están en http://localhost:5173/tareas. Esa pantalla muestra el orden y si cada tarea está lista o bloqueada. Vite también reenvía `/tasks` a la API.
+La holgura es cuántos días se puede atrasar una tarea sin mover el fin del proyecto. Si la holgura es 0, la tarea es crítica.
+
+En el frontend, con la sesión iniciada, las tareas están en http://localhost:5173/tareas. Esa pantalla muestra el orden, la holgura y marca el camino crítico. Vite también reenvía `/tasks` a la API.
