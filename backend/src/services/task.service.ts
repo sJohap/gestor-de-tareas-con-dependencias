@@ -16,6 +16,7 @@ function toTask(record: TaskRecord): Task {
     title: record.title,
     description: record.description,
     status: record.status,
+    durationDays: record.durationDays,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
@@ -37,6 +38,7 @@ export async function createTask(actorId: string, input: CreateTaskInput): Promi
     userId: actorId,
     title: input.title,
     description: input.description,
+    durationDays: input.durationDays,
   });
 
   return toTask(task);

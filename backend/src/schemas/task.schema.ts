@@ -15,15 +15,23 @@ const description = z
 
 const taskId = z.uuid("Identificador inválido");
 
+const durationDays = z.coerce
+  .number("La duración debe ser un número")
+  .int("La duración debe ser un número entero")
+  .min(1, "La duración mínima es 1 día")
+  .max(365, "La duración máxima es 365 días");
+
 export const createTaskSchema = z.object({
   title,
   description,
+  durationDays,
 });
 
 export const updateTaskSchema = z.object({
   title,
   description,
   status: z.enum(["pending", "in_progress", "done"], "Estado inválido"),
+  durationDays,
 });
 
 export const taskParamsSchema = z.object({

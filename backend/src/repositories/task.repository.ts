@@ -2,14 +2,14 @@ import { pool } from "../config/database";
 import type { NewTask, TaskRecord, TaskUpdate } from "../types/task";
 
 const taskColumns = `id, user_id AS "userId", title, description, status,
-  created_at AS "createdAt", updated_at AS "updatedAt"`;
+  duration_days AS "durationDays", created_at AS "createdAt", updated_at AS "updatedAt"`;
 
 export async function insertTask(task: NewTask): Promise<TaskRecord> {
   const result = await pool.query<TaskRecord>(
-    `INSERT INTO tasks (user_id, title, description)
-     VALUES ($1, $2, $3)
+    `INSERT INTO tasks (user_id, title, description, duration_days)
+     VALUES ($1, $2, $3, $4)
      RETURNING ${taskColumns}`,
-    [task.userId, task.title, task.description]
+    [task.userId, task.title, task.description, task.durationDays]
   );
 
   return result.rows[0];
@@ -45,10 +45,10 @@ export async function updateTask(
 ): Promise<TaskRecord | null> {
   const result = await pool.query<TaskRecord>(
     `UPDATE tasks
-     SET title = $1, description = $2, status = $3, updated_at = NOW()
-     WHERE id = $4 AND user_id = $5
+     SET title = $1, description = $2, status = $3, duration_days = $4, updated_at = NOW()
+     WHERE id = $5 AND user_id = $6
      RETURNING ${taskColumns}`,
-    [task.title, task.description, task.status, id, userId]
+    [task.title, task.description, task.status, task.durationDays, id, userId]
   );
 
   return result.rows[0] ?? null;

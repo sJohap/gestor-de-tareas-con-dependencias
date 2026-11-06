@@ -5,6 +5,7 @@ export type Task = {
   title: string;
   description: string | null;
   status: TaskStatus;
+  durationDays: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -17,12 +18,14 @@ export type NewTask = {
   userId: string;
   title: string;
   description: string | null;
+  durationDays: number;
 };
 
 export type TaskUpdate = {
   title: string;
   description: string | null;
   status: TaskStatus;
+  durationDays: number;
 };
 
 export type TaskDependency = {
