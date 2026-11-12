@@ -93,7 +93,7 @@ button {
   border: 0;
   border-radius: 8px;
   background: var(--color-accent);
-  color: #fff;
+  color: #0a0707;
   cursor: pointer;
 }
 
