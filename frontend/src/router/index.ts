@@ -1,8 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import DefaultLayout from '../layouts/DefaultLayout.vue'
-import AuthLayout from '../layouts/AuthLayout.vue'
-import HomeView from '../views/HomeView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -16,13 +13,13 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: DefaultLayout,
+      component: () => import('../layouts/DefaultLayout.vue'),
       meta: { requiresAuth: true },
       children: [
         {
           path: '',
           name: 'home',
-          component: HomeView,
+          component: () => import('../views/HomeView.vue'),
         },
         {
           path: 'about',
@@ -34,11 +31,16 @@ const router = createRouter({
           name: 'tasks',
           component: () => import('../views/TasksView.vue'),
         },
+        {
+          path: 'perfil',
+          name: 'profile',
+          component: () => import('../views/ProfileView.vue'),
+        },
       ],
     },
     {
       path: '/iniciar-sesion',
-      component: AuthLayout,
+      component: () => import('../layouts/AuthLayout.vue'),
       meta: { guestOnly: true },
       children: [
         {
@@ -50,7 +52,7 @@ const router = createRouter({
     },
     {
       path: '/registro',
-      component: AuthLayout,
+      component: () => import('../layouts/AuthLayout.vue'),
       meta: { guestOnly: true },
       children: [
         {
@@ -68,8 +70,12 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
+
+  if (to.meta.requiresAuth && !auth.ready) {
+    await auth.restoreSession()
+  }
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login' }

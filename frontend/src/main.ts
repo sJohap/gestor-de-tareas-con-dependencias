@@ -11,9 +11,12 @@ const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
-
-const auth = useAuthStore()
-await auth.restoreSession()
-
 app.use(router)
 app.mount('#app')
+
+const auth = useAuthStore()
+void auth.restoreSession().then(() => {
+  if (auth.isAuthenticated && router.currentRoute.value.meta.guestOnly) {
+    void router.replace({ name: 'home' })
+  }
+})

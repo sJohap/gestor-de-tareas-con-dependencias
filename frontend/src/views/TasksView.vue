@@ -314,7 +314,10 @@ h3 {
 .summary span {
   padding: 0.7rem 0.9rem;
   border-radius: 12px;
-  background: var(--color-accent-soft);
+  border: 1px solid rgb(255 255 255 / 14%);
+  background: rgb(32 36 40 / 88%);
+  color: #f4f6f8;
+  backdrop-filter: blur(12px);
 }
 
 .card {
@@ -479,22 +482,17 @@ button:disabled {
   list-style: none;
 }
 
-.badge {
-  margin-left: auto;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  background: var(--color-background-mute);
-  font-size: 0.85rem;
-}
-
-.badge[data-state='ready'] {
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-}
-
+.badge,
+.badge[data-state='ready'],
 .badge[data-state='blocked'] {
-  background: var(--color-critical-soft);
-  color: var(--color-critical);
+  margin-left: auto;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  background: rgb(32 36 40 / 88%);
+  color: #f4f6f8;
+  font-size: 0.85rem;
+  backdrop-filter: blur(12px);
 }
 
 .muted,

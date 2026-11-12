@@ -10,6 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => user.value !== null)
   let refreshRequest: Promise<void> | null = null
+  let restoreRequest: Promise<void> | null = null
 
   function applySession(session: AuthResponse): void {
     user.value = session.user
@@ -29,6 +30,11 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(email: string, password: string): Promise<void> {
     const response = await api.post<AuthResponse>('/auth/login', { email, password })
     applySession(response.data)
+  }
+
+  async function updateProfile(name: string, avatarUrl: string | null): Promise<void> {
+    const response = await api.patch<{ user: User }>('/auth/me', { name, avatarUrl })
+    user.value = response.data.user
   }
 
   async function logout(): Promise<void> {
@@ -54,14 +60,22 @@ export const useAuthStore = defineStore('auth', () => {
     return refreshRequest
   }
 
-  async function restoreSession(): Promise<void> {
-    try {
-      await refreshSession()
-    } catch {
-      clearSession()
-    } finally {
-      ready.value = true
+  function restoreSession(): Promise<void> {
+    if (ready.value) {
+      return Promise.resolve()
     }
+
+    if (!restoreRequest) {
+      restoreRequest = refreshSession()
+        .catch(() => {
+          clearSession()
+        })
+        .then(() => {
+          ready.value = true
+        })
+    }
+
+    return restoreRequest
   }
 
   return {
@@ -72,6 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     login,
     logout,
+    updateProfile,
     clearSession,
     refreshSession,
     restoreSession,
