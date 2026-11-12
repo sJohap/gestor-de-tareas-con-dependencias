@@ -33,3 +33,13 @@ export async function findUserById(id: string): Promise<User | null> {
 
   return result.rows[0] ?? null;
 }
+
+export async function listUsers(): Promise<User[]> {
+  const result = await pool.query<User>(
+    `SELECT id, name, email, role, created_at AS "createdAt"
+     FROM users
+     ORDER BY created_at ASC`
+  );
+
+  return result.rows;
+}
