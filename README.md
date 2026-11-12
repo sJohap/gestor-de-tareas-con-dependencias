@@ -118,3 +118,58 @@ El estado puede ser `pending`, `in_progress` o `done`. Una tarea no puede depend
 La holgura es cuántos días se puede atrasar una tarea sin mover el fin del proyecto. Si la holgura es 0, la tarea es crítica.
 
 En el frontend, con la sesión iniciada, las tareas están en http://localhost:5173/tareas. Esa pantalla muestra el orden, la holgura y marca el camino crítico. Vite también reenvía `/tasks` a la API.
+
+## Estructura
+
+```text
+backend/src
+  routes          recibe la petición HTTP
+  controllers     traduce la petición a una respuesta
+  services        decide las reglas
+  repositories    habla con PostgreSQL
+  domain          grafo, Kahn, camino crítico y holgura
+  middlewares     sesión, rol, límite de intentos y errores
+  db/migrations   historial de la base
+
+frontend/src
+  layouts         marco de la app y marco de acceso
+  views           pantallas
+  stores          sesión en memoria
+  router          guardias de las rutas
+```
+
+Cada petición queda escrita en la consola con el método, la ruta, el código y los milisegundos. Si la ruta no existe, la API responde `404`.
+
+## Roles y límite de intentos
+
+El registro crea cuentas con rol `user`. Un administrador se asigna en la base:
+
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'tu-correo@example.com';
+```
+
+`GET /admin/users` solo responde a un `admin`. El resto recibe `403`.
+
+`POST /auth/login` y `POST /auth/register` aceptan 8 intentos cada 15 minutos por dirección. El siguiente responde `429`.
+
+## Pruebas
+
+Dentro de `backend`:
+
+```powershell
+npm run test
+```
+
+Cubren el rechazo de ciclos, el orden de Kahn, el camino crítico, la holgura y si una tarea está lista o bloqueada.
+
+## Despliegue
+
+La API ya lee el puerto, la base, el secreto y el origen del frontend desde el entorno. En el servidor:
+
+- `COOKIE_SECURE=true` si el sitio usa HTTPS
+- `CLIENT_ORIGIN` con la dirección pública del frontend
+- `DATABASE_URL` con la base de producción
+- `JWT_ACCESS_SECRET` distinto del de tu PC
+
+El frontend se construye con `npm run build` dentro de `frontend`. La carpeta `frontend/dist` es la página lista para publicar.
+
