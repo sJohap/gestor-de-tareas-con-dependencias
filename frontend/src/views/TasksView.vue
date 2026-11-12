@@ -1,24 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { api } from '@/lib/api'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { storeToRefs } from 'pinia'
 import {
   executionStateLabels,
   taskStatusLabels,
   type Task,
-  type TaskPlan,
   type TaskStatus,
 } from '@/types/task'
+import { useTaskStore } from '@/stores/tasks'
 
-const tasks = ref<Task[]>([])
-const order = ref<TaskPlan['order']>([])
-const hasCycle = ref(false)
-const projectDays = ref(0)
+const taskStore = useTaskStore()
+const { tasks, order, hasCycle, projectDays, loading, errorMessage } = storeToRefs(taskStore)
 const title = ref('')
 const description = ref('')
 const durationDays = ref(1)
-const errorMessage = ref('')
-const loading = ref(true)
 const submitting = ref(false)
 const dependencyTarget = ref<Record<string, string>>({})
 
@@ -35,20 +30,11 @@ function otherTasks(taskId: string): Task[] {
   return tasks.value.filter((task) => task.id !== taskId)
 }
 
-async function loadTasks(): Promise<void> {
-  const response = await api.get<TaskPlan>('/tasks/plan')
-  tasks.value = response.data.tasks
-  order.value = response.data.order
-  hasCycle.value = response.data.hasCycle
-  projectDays.value = response.data.projectDays
-}
-
 async function onCreate(): Promise<void> {
-  errorMessage.value = ''
   submitting.value = true
 
   try {
-    await api.post('/tasks', {
+    await taskStore.createTask({
       title: title.value,
       description: description.value,
       durationDays: durationDays.value,
@@ -56,27 +42,23 @@ async function onCreate(): Promise<void> {
     title.value = ''
     description.value = ''
     durationDays.value = 1
-    await loadTasks()
-  } catch (error) {
-    errorMessage.value = getApiErrorMessage(error)
+  } catch {
+    return
   } finally {
     submitting.value = false
   }
 }
 
 async function saveTask(task: Task, patch: Partial<Pick<Task, 'status' | 'durationDays'>>): Promise<void> {
-  errorMessage.value = ''
-
   try {
-    await api.patch(`/tasks/${task.id}`, {
+    await taskStore.saveTask(task.id, {
       title: task.title,
       description: task.description ?? '',
       status: patch.status ?? task.status,
       durationDays: patch.durationDays ?? task.durationDays,
     })
-    await loadTasks()
-  } catch (error) {
-    errorMessage.value = getApiErrorMessage(error)
+  } catch {
+    return
   }
 }
 
@@ -85,13 +67,10 @@ async function onDelete(task: Task): Promise<void> {
     return
   }
 
-  errorMessage.value = ''
-
   try {
-    await api.delete(`/tasks/${task.id}`)
-    await loadTasks()
-  } catch (error) {
-    errorMessage.value = getApiErrorMessage(error)
+    await taskStore.removeTask(task.id)
+  } catch {
+    return
   }
 }
 
@@ -102,36 +81,24 @@ async function onAddDependency(task: Task): Promise<void> {
     return
   }
 
-  errorMessage.value = ''
-
   try {
-    await api.post(`/tasks/${task.id}/dependencies`, { dependsOnId })
+    await taskStore.addDependency(task.id, dependsOnId)
     dependencyTarget.value[task.id] = ''
-    await loadTasks()
-  } catch (error) {
-    errorMessage.value = getApiErrorMessage(error)
+  } catch {
+    return
   }
 }
 
 async function onRemoveDependency(task: Task, dependsOnId: string): Promise<void> {
-  errorMessage.value = ''
-
   try {
-    await api.delete(`/tasks/${task.id}/dependencies/${dependsOnId}`)
-    await loadTasks()
-  } catch (error) {
-    errorMessage.value = getApiErrorMessage(error)
+    await taskStore.removeDependency(task.id, dependsOnId)
+  } catch {
+    return
   }
 }
 
-onMounted(async () => {
-  try {
-    await loadTasks()
-  } catch (error) {
-    errorMessage.value = getApiErrorMessage(error)
-  } finally {
-    loading.value = false
-  }
+onMounted(() => {
+  void taskStore.loadPlan()
 })
 </script>
 

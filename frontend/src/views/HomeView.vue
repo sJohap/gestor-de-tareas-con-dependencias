@@ -1,39 +1,41 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { RouterLink } from 'vue-router'
-import { api } from '@/lib/api'
-import { getApiErrorMessage } from '@/lib/api-error'
-import { executionStateLabels, type Task, type TaskPlan } from '@/types/task'
+import { executionStateLabels, type Task } from '@/types/task'
+import { useTaskStore } from '@/stores/tasks'
 
-const plan = ref<TaskPlan | null>(null)
-const loading = ref(true)
-const errorMessage = ref('')
-
-const tasks = computed(() => plan.value?.tasks ?? [])
-const order = computed(() => plan.value?.order ?? [])
+const taskStore = useTaskStore()
+const { tasks, order, hasCycle, projectDays, loading, errorMessage } = storeToRefs(taskStore)
 const criticalTasks = computed(() => tasks.value.filter((task) => task.critical))
 const readyCount = computed(() => tasks.value.filter((task) => task.executionState === 'ready').length)
 const blockedCount = computed(() => tasks.value.filter((task) => task.executionState === 'blocked').length)
 
 const headline = computed(() => {
-  if (!plan.value || tasks.value.length === 0) {
+  if (loading.value && tasks.value.length === 0) {
+    return { first: 'Cargando', second: 'el plan' }
+  }
+  if (tasks.value.length === 0) {
     return { first: 'Sin tareas', second: 'todavía' }
   }
-  if (plan.value.hasCycle) {
+  if (hasCycle.value) {
     return { first: 'Hay un ciclo', second: 'en el plan' }
   }
   const lead = criticalTasks.value[0]
   return {
     first: lead?.title ?? 'Camino crítico',
-    second: `${plan.value.projectDays} días`,
+    second: `${projectDays.value} días`,
   }
 })
 
 const blurb = computed(() => {
-  if (!plan.value || tasks.value.length === 0) {
+  if (loading.value && tasks.value.length === 0) {
+    return 'Estamos leyendo el plan de ejecución.'
+  }
+  if (tasks.value.length === 0) {
     return 'Crea tareas, dales una duración y marca de cuáles dependen. El camino crítico aparece cuando el grafo no tiene ciclos.'
   }
-  if (plan.value.hasCycle) {
+  if (hasCycle.value) {
     return 'Una dependencia cierra un círculo. Quita ese enlace en Tareas para volver a calcular el orden y la holgura.'
   }
   return `${tasks.value.length} tareas en el plan. ${readyCount.value} pueden empezar, ${blockedCount.value} siguen bloqueadas y ${criticalTasks.value.length} están en el camino crítico.`
@@ -74,15 +76,8 @@ function stateOf(task: Task): string {
   return executionStateLabels[task.executionState]
 }
 
-onMounted(async () => {
-  try {
-    const response = await api.get<TaskPlan>('/tasks/plan')
-    plan.value = response.data
-  } catch (error) {
-    errorMessage.value = getApiErrorMessage(error)
-  } finally {
-    loading.value = false
-  }
+onMounted(() => {
+  void taskStore.loadPlan()
 })
 </script>
 
@@ -127,7 +122,7 @@ onMounted(async () => {
     <aside class="rail">
       <article class="card big">
         <p class="place">Proyecto</p>
-        <p class="temp">{{ plan?.projectDays ?? 0 }}<i>d</i></p>
+        <p class="temp">{{ projectDays }}<i>d</i></p>
         <div class="metrics">
           <span>{{ criticalTasks.length }} críticas</span>
           <span>{{ readyCount }} listas</span>

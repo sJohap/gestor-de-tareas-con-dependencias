@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '@/lib/api'
 import type { AuthResponse, User } from '@/types/user'
+import { useTaskStore } from '@/stores/tasks'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -20,6 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
   function clearSession(): void {
     user.value = null
     accessToken.value = null
+    useTaskStore().clear()
   }
 
   async function register(name: string, email: string, password: string): Promise<void> {
