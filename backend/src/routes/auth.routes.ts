@@ -7,14 +7,15 @@ import {
   registerController,
 } from "../controllers/auth.controller";
 import { requireAuth } from "../middlewares/require-auth";
+import { createAuthRateLimit } from "../middlewares/rate-limit";
 
 export const authRouter = Router();
 
-authRouter.post("/auth/register", (req, res, next) => {
+authRouter.post("/auth/register", createAuthRateLimit(), (req, res, next) => {
   registerController(req, res).catch(next);
 });
 
-authRouter.post("/auth/login", (req, res, next) => {
+authRouter.post("/auth/login", createAuthRateLimit(), (req, res, next) => {
   loginController(req, res).catch(next);
 });
 
