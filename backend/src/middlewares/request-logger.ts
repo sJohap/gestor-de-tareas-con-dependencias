@@ -4,8 +4,17 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
   const startedAt = Date.now();
 
   res.on("finish", () => {
-    const elapsedMs = Date.now() - startedAt;
-    console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${elapsedMs}ms`);
+    console.log(
+      JSON.stringify({
+        level: "info",
+        time: new Date().toISOString(),
+        correlationId: req.correlationId,
+        method: req.method,
+        path: req.originalUrl,
+        status: res.statusCode,
+        durationMs: Date.now() - startedAt,
+      }),
+    );
   });
 
   next();

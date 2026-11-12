@@ -3,7 +3,7 @@ import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { ZodError } from "zod";
 import { HttpError } from "../utils/http-error";
 
-export const errorHandler: ErrorRequestHandler = (err: unknown, _req, res, _next) => {
+export const errorHandler: ErrorRequestHandler = (err: unknown, req, res, _next) => {
   if (err instanceof TokenExpiredError) {
     res.status(401).json({
       status: "error",
@@ -48,7 +48,14 @@ export const errorHandler: ErrorRequestHandler = (err: unknown, _req, res, _next
     return;
   }
 
-  console.error(err);
+  console.error(
+    JSON.stringify({
+      level: "error",
+      time: new Date().toISOString(),
+      correlationId: req.correlationId,
+      message: err instanceof Error ? err.message : "Error interno",
+    }),
+  );
   res.status(500).json({
     status: "error",
     message: "Error interno del servidor",

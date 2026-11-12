@@ -6,7 +6,7 @@ function refreshCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
     secure: env.cookieSecure,
-    sameSite: "lax",
+    sameSite: "strict",
     path: "/auth",
     maxAge: env.refreshTokenTtlSeconds * 1000,
   };
@@ -20,7 +20,7 @@ export function clearRefreshCookie(res: Response): void {
   res.clearCookie(REFRESH_COOKIE_NAME, {
     httpOnly: true,
     secure: env.cookieSecure,
-    sameSite: "lax",
+    sameSite: "strict",
     path: "/auth",
   });
 }

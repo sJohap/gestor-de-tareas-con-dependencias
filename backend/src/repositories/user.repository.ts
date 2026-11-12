@@ -1,4 +1,5 @@
 import { pool } from "../config/database";
+import type { Db } from "../db/transaction";
 import type { NewUser, User, UserWithPassword } from "../types/user";
 
 const userColumns = `id, name, email, role, avatar_url AS "avatarUrl", created_at AS "createdAt"`;
@@ -25,8 +26,8 @@ export async function findUserByEmail(email: string): Promise<UserWithPassword |
   return result.rows[0] ?? null;
 }
 
-export async function findUserById(id: string): Promise<User | null> {
-  const result = await pool.query<User>(
+export async function findUserById(id: string, db: Db = pool): Promise<User | null> {
+  const result = await db.query<User>(
     `SELECT ${userColumns}
      FROM users
      WHERE id = $1`,
