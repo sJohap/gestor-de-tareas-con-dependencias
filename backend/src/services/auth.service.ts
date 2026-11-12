@@ -1,5 +1,5 @@
 import { DatabaseError } from "pg";
-import { findUserByEmail, insertUser } from "../repositories/user.repository";
+import { findUserByEmail, insertUser, updateOwnProfile } from "../repositories/user.repository";
 import type { LoginInput, RegisterInput } from "../schemas/auth.schema";
 import type { User } from "../types/user";
 import { HttpError } from "../utils/http-error";
@@ -36,6 +36,20 @@ export async function loginUser(input: LoginInput): Promise<User> {
     name: user.name,
     email: user.email,
     role: user.role,
+    avatarUrl: user.avatarUrl,
     createdAt: user.createdAt,
   };
+}
+
+export async function updateProfile(
+  userId: string,
+  input: { name: string; avatarUrl: string | null },
+): Promise<User> {
+  const user = await updateOwnProfile(userId, input);
+
+  if (!user) {
+    throw new HttpError(404, "Usuario no encontrado");
+  }
+
+  return user;
 }

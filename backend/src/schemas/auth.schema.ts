@@ -28,3 +28,17 @@ export const loginSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const updateProfileSchema = z.object({
+  name: z
+    .string("El nombre es obligatorio")
+    .trim()
+    .min(2, "El nombre debe tener al menos 2 caracteres")
+    .max(80, "El nombre no puede tener más de 80 caracteres"),
+  avatarUrl: z
+    .string("La foto no es válida")
+    .max(400_000, "La foto es demasiado pesada")
+    .nullable(),
+});
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

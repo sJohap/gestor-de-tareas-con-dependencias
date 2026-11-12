@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { loginSchema, registerSchema } from "../schemas/auth.schema";
-import { loginUser, registerUser } from "../services/auth.service";
+import { loginSchema, registerSchema, updateProfileSchema } from "../schemas/auth.schema";
+import { loginUser, registerUser, updateProfile } from "../services/auth.service";
 import { createAuthSession, revokeAuthSession, rotateAuthSession } from "../services/session.service";
 import { HttpError } from "../utils/http-error";
 import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from "../utils/cookies";
@@ -52,6 +52,16 @@ export async function logoutController(req: Request, res: Response): Promise<voi
   await revokeAuthSession(readRefreshCookie(req), req.user.id);
   clearRefreshCookie(res);
   res.status(204).send();
+}
+
+export async function updateProfileController(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new HttpError(401, "Falta el token de acceso");
+  }
+
+  const input = updateProfileSchema.parse(req.body);
+  const user = await updateProfile(req.user.id, input);
+  res.status(200).json({ user });
 }
 
 export async function meController(req: Request, res: Response): Promise<void> {
