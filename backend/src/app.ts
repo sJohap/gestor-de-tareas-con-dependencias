@@ -2,6 +2,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import { env } from "./config/env";
+import { correlationId } from "./middlewares/correlation-id";
 import { errorHandler } from "./middlewares/error-handler";
 import { notFoundHandler } from "./middlewares/not-found";
 import { requestLogger } from "./middlewares/request-logger";
@@ -22,6 +23,7 @@ export function createApp() {
   );
   app.use(cookieParser());
   app.use(express.json({ limit: "500kb" }));
+  app.use(correlationId);
   app.use(requestLogger);
 
   app.get("/", (_req, res) => {

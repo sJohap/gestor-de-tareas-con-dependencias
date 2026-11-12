@@ -58,7 +58,7 @@ Prueba en el navegador:
 - Si el correo o la contraseña no coinciden, `/auth/login` responde `401`.
 - Si falta un campo o tiene un formato inválido, la respuesta es `400` con la lista de errores.
 - Registro e inicio de sesión responden con el usuario y un `accessToken` JWT. Ese token dura 15 minutos y se envía en `Authorization: Bearer ...`. El frontend lo guarda en memoria.
-- Esas mismas respuestas dejan una cookie `refreshToken`: HttpOnly, SameSite Lax y con ruta `/auth`. Dura 7 días. En la base solo se guarda su hash, nunca el valor de la cookie.
+- Esas mismas respuestas dejan una cookie `refreshToken`: HttpOnly, SameSite Strict y con ruta `/auth`. `Secure` solo se enciende con `COOKIE_SECURE=true`, cuando el sitio ya usa HTTPS. Dura 7 días. En la base solo se guarda su hash, nunca el valor de la cookie. Rotar o cerrar la sesión bloquea esa fila para que dos usos a la vez no dejen la misma cookie viva.
 - `POST /auth/refresh` lee esa cookie, la invalida y entrega otra junto con un access token nuevo. Si se reutiliza una cookie ya usada, se cierran todas las sesiones de ese usuario.
 - `POST /auth/logout` solo revoca la cookie si pertenece al usuario del access token. Si no es suya, responde `403`.
 - `GET /auth/me` responde `401` si falta el token, está mal formado o ya expiró.
@@ -134,11 +134,13 @@ backend/src
 frontend/src
   layouts         marco de la app y marco de acceso
   views           pantallas
-  stores          sesión en memoria
+  stores          sesión en memoria y tareas normalizadas, con carga, error y caché
   router          guardias de las rutas
 ```
 
-Cada petición queda escrita en la consola con el método, la ruta, el código y los milisegundos. Si la ruta no existe, la API responde `404`.
+Cada respuesta lleva la cabecera `x-correlation-id`. La consola escribe un JSON con ese id, el método, la ruta, el código y los milisegundos. Si la ruta no existe, la API responde `404`.
+
+Editar o borrar una tarea, y crear o quitar una dependencia, ocurre dentro de una transacción. Antes de cambiar el grafo se bloquean las filas de las tareas de ese usuario, en orden de id, para que dos enlaces a la vez no armen un ciclo. Las sesiones vencidas se borran en una cola en memoria: si el borrado falla, se reintenta y el fallo queda registrado.
 
 ## Roles y límite de intentos
 
@@ -160,7 +162,7 @@ Dentro de `backend`:
 npm run test
 ```
 
-Cubren el rechazo de ciclos, el orden de Kahn, el camino crítico, la holgura y si una tarea está lista o bloqueada.
+Cubren el rechazo de ciclos, el orden de Kahn, el camino crítico, la holgura, si una tarea está lista o bloqueada, y la cola en memoria. En GitHub, el workflow `tests` corre esas pruebas en cada push y en cada pull request.
 
 ## Despliegue
 

@@ -1,4 +1,5 @@
 import { pool } from "../config/database";
+import type { Db } from "../db/transaction";
 import type { NewTask, TaskRecord, TaskUpdate } from "../types/task";
 
 const taskColumns = `id, user_id AS "userId", title, description, status,
@@ -27,8 +28,8 @@ export async function listTasksByUser(userId: string): Promise<TaskRecord[]> {
   return result.rows;
 }
 
-export async function findTaskById(id: string): Promise<TaskRecord | null> {
-  const result = await pool.query<TaskRecord>(
+export async function findTaskById(id: string, db: Db = pool): Promise<TaskRecord | null> {
+  const result = await db.query<TaskRecord>(
     `SELECT ${taskColumns}
      FROM tasks
      WHERE id = $1`,
@@ -38,12 +39,30 @@ export async function findTaskById(id: string): Promise<TaskRecord | null> {
   return result.rows[0] ?? null;
 }
 
+export async function lockTasksForUpdate(
+  userId: string,
+  taskIds: string[],
+  db: Db,
+): Promise<TaskRecord[]> {
+  const result = await db.query<TaskRecord>(
+    `SELECT ${taskColumns}
+     FROM tasks
+     WHERE user_id = $1 OR id = ANY($2::uuid[])
+     ORDER BY id
+     FOR UPDATE`,
+    [userId, taskIds]
+  );
+
+  return result.rows;
+}
+
 export async function updateTask(
   id: string,
   userId: string,
   task: TaskUpdate,
+  db: Db = pool,
 ): Promise<TaskRecord | null> {
-  const result = await pool.query<TaskRecord>(
+  const result = await db.query<TaskRecord>(
     `UPDATE tasks
      SET title = $1, description = $2, status = $3, duration_days = $4, updated_at = NOW()
      WHERE id = $5 AND user_id = $6
@@ -54,8 +73,8 @@ export async function updateTask(
   return result.rows[0] ?? null;
 }
 
-export async function deleteTask(id: string, userId: string): Promise<boolean> {
-  const result = await pool.query(
+export async function deleteTask(id: string, userId: string, db: Db = pool): Promise<boolean> {
+  const result = await db.query(
     `DELETE FROM tasks
      WHERE id = $1 AND user_id = $2`,
     [id, userId]

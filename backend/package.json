@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "migrate": "tsx src/db/migrate.ts",
-    "test": "tsx --test src/domain/algorithms.test.ts"
+    "test": "tsx --test src/domain/algorithms.test.ts src/jobs/memory-queue.test.ts"
   },
   "dependencies": {
     "argon2": "^0.45.1",

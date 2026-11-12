@@ -1,8 +1,9 @@
+import { withTransaction } from "../db/transaction";
 import {
   deleteTask,
-  findTaskById,
   insertTask,
   listTasksByUser,
+  lockTasksForUpdate,
   updateTask,
 } from "../repositories/task.repository";
 import type { CreateTaskInput, UpdateTaskInput } from "../schemas/task.schema";
@@ -22,8 +23,8 @@ function toTask(record: TaskRecord): Task {
   };
 }
 
-async function requireOwnTask(taskId: string, actorId: string): Promise<TaskRecord> {
-  const task = await findTaskById(taskId);
+function requireLockedTask(tasks: TaskRecord[], taskId: string, actorId: string): TaskRecord {
+  const task = tasks.find((item) => item.id === taskId);
 
   if (!task) {
     throw new HttpError(404, "Tarea no encontrada");
@@ -54,23 +55,29 @@ export async function editTask(
   taskId: string,
   input: UpdateTaskInput,
 ): Promise<Task> {
-  await requireOwnTask(taskId, actorId);
+  return withTransaction(async (db) => {
+    const locked = await lockTasksForUpdate(actorId, [taskId], db);
+    requireLockedTask(locked, taskId, actorId);
 
-  const task = await updateTask(taskId, actorId, input);
+    const task = await updateTask(taskId, actorId, input, db);
 
-  if (!task) {
-    throw new HttpError(404, "Tarea no encontrada");
-  }
+    if (!task) {
+      throw new HttpError(404, "Tarea no encontrada");
+    }
 
-  return toTask(task);
+    return toTask(task);
+  });
 }
 
 export async function removeTask(actorId: string, taskId: string): Promise<void> {
-  await requireOwnTask(taskId, actorId);
+  await withTransaction(async (db) => {
+    const locked = await lockTasksForUpdate(actorId, [taskId], db);
+    requireLockedTask(locked, taskId, actorId);
 
-  const deleted = await deleteTask(taskId, actorId);
+    const deleted = await deleteTask(taskId, actorId, db);
 
-  if (!deleted) {
-    throw new HttpError(404, "Tarea no encontrada");
-  }
+    if (!deleted) {
+      throw new HttpError(404, "Tarea no encontrada");
+    }
+  });
 }

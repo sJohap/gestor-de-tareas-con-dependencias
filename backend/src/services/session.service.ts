@@ -1,10 +1,13 @@
+import { withTransaction } from "../db/transaction";
+import { jobQueue } from "../jobs/memory-queue";
 import {
-  findRefreshTokenByHash,
+  findRefreshTokenForUpdate,
   insertRefreshToken,
   revokeRefreshToken,
   revokeRefreshTokensForUser,
 } from "../repositories/refresh-token.repository";
 import { findUserById } from "../repositories/user.repository";
+import type { Db } from "../db/transaction";
 import type { User } from "../types/user";
 import { signAccessToken } from "../utils/access-token";
 import { assertOwner } from "../utils/assert-owner";
@@ -18,54 +21,85 @@ export type AuthSession = {
   refreshToken: string;
 };
 
-async function persistRefreshToken(userId: string): Promise<string> {
+async function persistRefreshToken(userId: string, db?: Db): Promise<string> {
   const refreshToken = generateRefreshToken();
   const expiresAt = new Date(Date.now() + env.refreshTokenTtlSeconds * 1000);
 
-  await insertRefreshToken({
+  const stored = {
     userId,
     tokenHash: hashRefreshToken(refreshToken),
     expiresAt,
-  });
+  };
+
+  if (db) {
+    await insertRefreshToken(stored, db);
+  } else {
+    await insertRefreshToken(stored);
+  }
 
   return refreshToken;
 }
 
+function scheduleSessionCleanup(): void {
+  jobQueue.enqueue("purge-expired-sessions");
+}
+
 export async function createAuthSession(user: User): Promise<AuthSession> {
-  return {
+  const session = {
     user,
     accessToken: signAccessToken(user),
     refreshToken: await persistRefreshToken(user.id),
   };
+
+  scheduleSessionCleanup();
+  return session;
 }
 
 export async function rotateAuthSession(rawRefreshToken: string): Promise<AuthSession> {
-  const stored = await findRefreshTokenByHash(hashRefreshToken(rawRefreshToken));
+  const tokenHash = hashRefreshToken(rawRefreshToken);
+  let stolen = false;
 
-  if (!stored) {
+  const session = await withTransaction(async (db) => {
+    const stored = await findRefreshTokenForUpdate(tokenHash, db);
+
+    if (!stored) {
+      throw new HttpError(401, "Sesión inválida");
+    }
+
+    if (stored.revokedAt) {
+      await revokeRefreshTokensForUser(stored.userId, db);
+      stolen = true;
+      return null;
+    }
+
+    if (new Date(stored.expiresAt).getTime() <= Date.now()) {
+      await revokeRefreshToken(stored.id, db);
+      throw new HttpError(401, "Sesión inválida");
+    }
+
+    const user = await findUserById(stored.userId, db);
+
+    if (!user) {
+      await revokeRefreshToken(stored.id, db);
+      throw new HttpError(401, "Sesión inválida");
+    }
+
+    await revokeRefreshToken(stored.id, db);
+
+    return {
+      user,
+      accessToken: signAccessToken(user),
+      refreshToken: await persistRefreshToken(user.id, db),
+    };
+  });
+
+  scheduleSessionCleanup();
+
+  if (stolen || !session) {
     throw new HttpError(401, "Sesión inválida");
   }
 
-  if (stored.revokedAt) {
-    await revokeRefreshTokensForUser(stored.userId);
-    throw new HttpError(401, "Sesión inválida");
-  }
-
-  if (new Date(stored.expiresAt).getTime() <= Date.now()) {
-    await revokeRefreshToken(stored.id);
-    throw new HttpError(401, "Sesión inválida");
-  }
-
-  const user = await findUserById(stored.userId);
-
-  if (!user) {
-    await revokeRefreshToken(stored.id);
-    throw new HttpError(401, "Sesión inválida");
-  }
-
-  await revokeRefreshToken(stored.id);
-
-  return createAuthSession(user);
+  return session;
 }
 
 export async function revokeAuthSession(
@@ -76,12 +110,16 @@ export async function revokeAuthSession(
     return;
   }
 
-  const stored = await findRefreshTokenByHash(hashRefreshToken(rawRefreshToken));
+  await withTransaction(async (db) => {
+    const stored = await findRefreshTokenForUpdate(hashRefreshToken(rawRefreshToken), db);
 
-  if (!stored || stored.revokedAt) {
-    return;
-  }
+    if (!stored || stored.revokedAt) {
+      return;
+    }
 
-  assertOwner(actorId, stored.userId);
-  await revokeRefreshToken(stored.id);
+    assertOwner(actorId, stored.userId);
+    await revokeRefreshToken(stored.id, db);
+  });
+
+  scheduleSessionCleanup();
 }
